@@ -28,3 +28,9 @@
 
 <!-- Link to or list major architectural decisions and the reasoning behind them. -->
 <!-- E.g., "We chose PostgreSQL over MongoDB because..." -->
+
+## Design Docs
+
+See [docs/design-docs/index.md](./design-docs/index.md) for the full catalogue of design documents.
+
+Core beliefs: [docs/design-docs/core-beliefs.md](./design-docs/core-beliefs.md)

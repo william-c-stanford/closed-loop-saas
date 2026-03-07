@@ -27,3 +27,7 @@
 ## Key Metrics
 
 <!-- What numbers matter? What does success look like? -->
+
+## Product Specs
+
+See [docs/product-specs/index.md](./product-specs/index.md) for the full catalogue of product specifications.

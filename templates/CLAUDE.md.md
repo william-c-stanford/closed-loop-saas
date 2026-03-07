@@ -29,15 +29,12 @@ Claude Code lazy-loads these automatically when it navigates into a module direc
 
 | Document | Purpose |
 |---|---|
-| [docs/DESIGN.md](./docs/DESIGN.md) | Design philosophy and principles |
+| [docs/DESIGN.md](./docs/DESIGN.md) | Design philosophy, principles, and design doc catalogue |
 | [docs/FRONTEND.md](./docs/FRONTEND.md) | Frontend conventions and component patterns |
 | [docs/SECURITY.md](./docs/SECURITY.md) | Security posture and auth patterns |
 | [docs/RELIABILITY.md](./docs/RELIABILITY.md) | SLOs, error handling, and runbooks |
 | [docs/QUALITY_SCORE.md](./docs/QUALITY_SCORE.md) | Domain quality grades and gaps |
-| [docs/PRODUCT_SENSE.md](./docs/PRODUCT_SENSE.md) | Product principles and decisions |
-| [docs/design-docs/index.md](./docs/design-docs/index.md) | Design doc catalogue |
-| [docs/design-docs/core-beliefs.md](./docs/design-docs/core-beliefs.md) | Core engineering beliefs |
-| [docs/product-specs/index.md](./docs/product-specs/index.md) | Product spec catalogue |
+| [docs/PRODUCT_SENSE.md](./docs/PRODUCT_SENSE.md) | Product principles and product spec catalogue |
 
 ## Generated Docs
 
