@@ -1,0 +1,18 @@
+{
+  "name": "context-gardening",
+  "version": "0.1.0",
+  "description": "A Claude Code plugin for agent-legible repository knowledge management",
+  "license": "MIT",
+  "keywords": ["claude-code", "plugin", "documentation", "ai", "context-management"],
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "SKILL.md",
+    "linters/",
+    "hooks/",
+    "templates/",
+    "github-actions/",
+    ".garden/"
+  ]
+}

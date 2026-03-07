@@ -1,0 +1,13 @@
+#!/bin/sh
+# context-gardening pre-push hook
+# Runs stricter doc checks (cross-links, orphan detection) before pushing.
+# Install: cp hooks/pre-push .git/hooks/pre-push && chmod +x .git/hooks/pre-push
+
+LINTERS_DIR="$(git rev-parse --show-toplevel)/.garden/linters"
+
+if [ ! -f "$LINTERS_DIR/run-all.js" ]; then
+  echo "context-gardening: linters not installed. Run /context-gardening:init to set up."
+  exit 0
+fi
+
+node "$LINTERS_DIR/run-all.js" --pre-push

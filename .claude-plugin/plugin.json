@@ -1,0 +1,11 @@
+{
+  "name": "context-gardening",
+  "description": "Agent-legible repository knowledge management. Enforces CLAUDE.md as a navigation map, per-module nested CLAUDE.md files for local conventions (lazy-loaded by Claude Code natively), and an AI gardener that keeps docs in sync with code.",
+  "version": "0.1.0",
+  "author": {
+    "name": "William Stanford"
+  },
+  "homepage": "https://github.com/williamstanford/context-gardening",
+  "repository": "https://github.com/williamstanford/context-gardening",
+  "license": "MIT"
+}
