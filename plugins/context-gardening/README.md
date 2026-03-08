@@ -66,7 +66,7 @@ If you prefer to install just this plugin without adding the full marketplace:
 
 ```bash
 # Clone the repo
-git clone https://github.com/williamstanford/closed-loop-saas.git ~/claude-plugins/closed-loop-saas
+git clone https://github.com/william-c-stanford/closed-loop-saas.git ~/claude-plugins/closed-loop-saas
 ```
 
 Then add it to your Claude Code settings (`~/.claude/settings.json`):
