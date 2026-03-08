@@ -47,7 +47,7 @@ See [docs/references/](./docs/references/) for llms.txt files and external specs
 
 ## Gardening
 
-This repo uses [context-gardening](https://github.com/williamstanford/context-gardening).
+This repo uses [context-gardening](https://github.com/william-c-stanford/context-gardening).
 
 - `/garden:status` — knowledge base health dashboard
 - `/garden:tend` — update docs that have drifted from the code

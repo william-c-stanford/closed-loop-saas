@@ -56,7 +56,7 @@ When Claude Code opens a session it reads root `CLAUDE.md` (the map — kept sho
 Add the full marketplace, then install the plugin:
 
 ```
-/plugin marketplace add williamstanford/closed-loop-saas
+/plugin marketplace add william-c-stanford/closed-loop-saas
 /plugin install context-gardening@closed-loop-saas
 ```
 
