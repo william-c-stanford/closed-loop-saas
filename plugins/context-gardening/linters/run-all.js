@@ -44,6 +44,7 @@ function main() {
   const args = process.argv.slice(2);
   const mode = args.find(a => a.startsWith('--'))?.replace('--', '') || 'pre-commit';
   const jsonOutput = args.includes('--json');
+  const isClaudeCode = process.env.CLAUDECODE === '1';
 
   const repoRoot = findRepoRoot(process.cwd());
   const config = loadConfig(repoRoot);
@@ -83,19 +84,44 @@ function main() {
 
     // Suggest relevant garden commands based on which checks failed
     const failedChecks = new Set([...errors, ...warnings].map(r => r.check));
-    const suggestions = [];
+    const suggestionKeys = [];
+    const suggestionLines = [];
     if (failedChecks.has('plans-misplaced') || failedChecks.has('plans-stray')) {
-      suggestions.push('/garden:harmonize  — move misplaced plan/spec files into docs/');
+      suggestionKeys.push('harmonize');
+      suggestionLines.push(['/garden:harmonize', 'move misplaced plan/spec files into docs/']);
     }
     if (failedChecks.has('plans-orphan') || failedChecks.has('plans-active-structure') || failedChecks.has('cross-links')) {
-      suggestions.push('/garden:tend       — repair orphaned plans, fix structure, sync PLANS.md');
+      suggestionKeys.push('tend');
+      suggestionLines.push(['/garden:tend', 'repair orphaned plans, fix structure, sync PLANS.md']);
     }
     if (failedChecks.has('claude-md-toc-sync')) {
-      suggestions.push('/garden:weed       — remove or link docs not reachable from CLAUDE.md');
+      suggestionKeys.push('weed');
+      suggestionLines.push(['/garden:weed', 'remove or link docs not reachable from CLAUDE.md']);
     }
 
-    if (suggestions.length > 0) {
-      console.log('\nTo fix, run in Claude:\n' + suggestions.map(s => `  ${s}`).join('\n'));
+    if (suggestionLines.length > 0) {
+      // Only emit the sentinel and skip human-readable suggestions when Claude Code
+      // is running AND there are blocking errors (not just warnings)
+      if (isClaudeCode && errors.length > 0) {
+        const sentinel = JSON.stringify({
+          suggestions: suggestionKeys,
+          errorCount: errors.length,
+          warnCount: warnings.length,
+        });
+        console.log(`\n[GARDEN:ASK] ${sentinel}`);
+      } else if (isClaudeCode) {
+        // Warnings only in Claude Code — print normally, no sentinel
+        console.log('\nTo fix, run:\n' + suggestionLines.map(([cmd, desc]) => `  ${cmd}  — ${desc}`).join('\n'));
+      } else if (process.env.CI) {
+        // CI environment — commands aren't runnable, give guidance
+        console.log('\nTo fix these issues, open a Claude Code session locally and run:');
+        console.log(suggestionLines.map(([cmd, desc]) => `  ${cmd}  — ${desc}`).join('\n'));
+        console.log('\n  (Slash commands require an active Claude Code session)');
+      } else {
+        // Human at a terminal — provide copy-pasteable claude -p commands
+        console.log('\nTo fix, open a Claude session or run in your terminal:');
+        console.log(suggestionLines.map(([cmd, desc]) => `  claude -p "${cmd}"   — ${desc}`).join('\n'));
+      }
     }
   } else {
     console.log('All checks passed.');

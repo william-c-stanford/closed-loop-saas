@@ -109,6 +109,42 @@ Warnings are non-blocking. Errors (`plans-active-structure`, broken links, line 
 
 ---
 
+## Interactive Remediation in Claude Code
+
+When Claude Code runs a `git commit` or `git push` that gets blocked by garden linter errors, instead of printing slash commands you have to manually re-type, it surfaces an interactive prompt asking what to do.
+
+**In a Claude Code session** (Claude is doing the commit):
+
+> _Garden linter found 2 error(s). What would you like to do?_
+> - Run `/garden:harmonize` (move misplaced plan/spec files into docs/)
+> - Run all applicable fixes
+> - Skip for now (commit stays blocked)
+> - **Auto-accept fixes on future commits/PRs — run now + save preference**
+
+Selecting a fix causes Claude to run the skill and then offer to re-commit. Selecting **Auto-accept** saves your preference so future commits silently run fixes without asking.
+
+**Auto-accept preference** is stored in `.garden/config.local.json` (gitignored — personal, never committed). To disable it:
+
+```bash
+# View current preference
+cat .garden/config.local.json
+
+# Reset auto-accept
+rm .garden/config.local.json
+# or manually set: {"auto_accept_fixes": false}
+```
+
+**In a terminal session** (you ran `git commit` yourself):
+
+Instead of `/garden:harmonize`, the output shows a copy-pasteable command:
+
+```
+To fix, open a Claude session or run in your terminal:
+  claude -p "/garden:harmonize"   — move misplaced plan/spec files into docs/
+```
+
+---
+
 ## The Gardener Agent
 
 `/garden:tend` is a Claude Code skill — Claude itself is the agent. No external API calls, no SDK. When you run it, Claude:

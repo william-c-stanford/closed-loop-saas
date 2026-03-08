@@ -9,6 +9,15 @@
             "command": "node .garden/linters/run-all.js --pre-commit --json 2>/dev/null | node -e \"const r=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));const w=r.filter(x=>x.status==='warn'&&x.check==='doc-coverage');if(w.length)process.stderr.write('[garden] ' + w[0].message + (w[0].detail ? '\\n' + w[0].detail : '') + '\\n')\" 2>&1 || true"
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .garden/hooks/git-commit-advisor.js 2>/dev/null || true"
+          }
+        ]
       }
     ]
   }

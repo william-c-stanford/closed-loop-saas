@@ -123,14 +123,14 @@ Skip modules that already have a CLAUDE.md.
 
 Do NOT leave this step partially done. If there are 8 qualifying modules, scaffold all 8. The goal is that `/context-gardening:status` shows zero missing CLAUDE.md warnings immediately after init completes.
 
-**Step 6 — Install linters**
+**Step 6 — Install linters and hooks**
 
 Copy linter scripts to .garden/linters/:
 ```bash
-mkdir -p .garden/linters
+mkdir -p .garden/linters .garden/hooks
 ```
 
-Locate the plugin directory (the directory containing this SKILL.md's parent `skills/init/` folder) and copy all files from `linters/` into `.garden/linters/`.
+Locate the plugin directory (the directory containing this SKILL.md's parent `skills/init/` folder) and copy all files from `linters/` into `.garden/linters/`, and all files from `hooks/` into `.garden/hooks/`.
 
 Install git hooks:
 ```bash
@@ -139,6 +139,13 @@ cp <plugin-path>/git-hooks/pre-commit .git/hooks/pre-commit
 cp <plugin-path>/git-hooks/pre-push .git/hooks/pre-push
 chmod +x .git/hooks/pre-commit .git/hooks/pre-push
 ```
+
+Add `.garden/config.local.json` to `.gitignore` (this file stores personal Claude Code preferences and must not be committed):
+```bash
+echo '.garden/config.local.json' >> .gitignore
+```
+
+If `.gitignore` doesn't exist yet, create it with that single entry.
 
 **Step 7 — Create .garden/config.json**
 
