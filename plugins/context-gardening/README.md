@@ -5,8 +5,20 @@ A Claude Code plugin for agent-legible repository knowledge management.
 Implements **progressive disclosure** for repository knowledge:
 
 - **Root `CLAUDE.md`** — a navigation map only (~100–150 lines). Loaded at every session start, so it must stay short. Points to everything else.
-- **Module `CLAUDE.md` files** — thorough local style guides. Loaded by Claude Code *only* when it navigates into that directory. No brevity pressure — they should be as complete as needed to let an agent or contributor work confidently in that module without re-reading source files.
+- **Module `CLAUDE.md` files** — thorough local style guides. Loaded by Claude Code *only* when it navigates into that directory. No brevity pressure — they should be as complete as needed to let an agent or contributor work confidently in that module without re-reading source files first.
 - **`docs/`** — the system of record for architecture, design decisions, plans, and product specs.
+
+---
+
+## Inspiration
+
+This plugin draws directly from two engineering approaches that treat documentation as infrastructure for AI agents, not humans.
+
+**[Execution Plans for Codex](https://developers.openai.com/cookbook/articles/codex_exec_plans)** (OpenAI Developer Cookbook) describes a structured document format for guiding AI coding agents through multi-hour tasks. The key insight: agents need *self-contained, verifiable specifications* — not just instructions, but living documents with a `## Progress` checklist, a `## Decision Log` recording every design choice, and a `## Outcomes & Retrospective` written at completion. Without these anchors, agents drift. With them, they can sustain coherent work across extended sessions. The ExecPlan structure enforced by this plugin's linter (`plans-active-structure` check) is a direct implementation of this format.
+
+**[Harness Engineering with AI](https://openai.com/index/harness-engineering/)** (OpenAI) demonstrates how Harness.io restructured their codebase to be legible to AI agents at scale. The core lesson: productivity gains from AI coding agents are bounded by how well the codebase *explains itself*. Teams that invested in structured, agent-readable context — clear module boundaries, explicit conventions, documented decisions — saw compounding returns. Teams that didn't hit a ceiling. The `CLAUDE.md` hierarchy in this plugin (root nav map → lazy-loaded module guides) is the direct operationalization of this pattern: context is structured, scoped, and loaded only when relevant.
+
+Together these informed the core premise of context-gardening: **a codebase's documentation is not just for humans reading it, it is the primary input surface for AI agents working in it.** Keeping that surface accurate, scoped, and continuously maintained is an engineering discipline, not a documentation chore.
 
 ---
 
@@ -39,7 +51,43 @@ When Claude Code opens a session it reads root `CLAUDE.md` (the map — kept sho
 
 ## Installation
 
-Install as a Claude Code plugin, then run in any repository:
+### Option 1 — Claude Code Marketplace (recommended)
+
+Add the full marketplace, then install the plugin:
+
+```
+/plugin marketplace add williamstanford/closed-loop-saas
+/plugin install context-gardening@closed-loop-saas
+```
+
+### Option 2 — Install from GitHub directly
+
+If you prefer to install just this plugin without adding the full marketplace:
+
+```bash
+# Clone the repo
+git clone https://github.com/williamstanford/closed-loop-saas.git ~/claude-plugins/closed-loop-saas
+```
+
+Then add it to your Claude Code settings (`~/.claude/settings.json`):
+
+```json
+{
+  "plugins": [
+    {
+      "path": "~/claude-plugins/closed-loop-saas/plugins/context-gardening"
+    }
+  ]
+}
+```
+
+### Option 3 — Self-host / fork
+
+Fork this repo, adjust the plugins to your team's conventions, and point your Claude Code settings at your fork. This is recommended for teams who want to customize the linter rules or add skills.
+
+### After installation
+
+Once installed, run in any repository:
 
 ```
 /garden:init
@@ -66,7 +114,7 @@ This scaffolds the full documentation structure, installs git hooks, generates m
 
 Plans are treated as first-class artifacts. `docs/PLANS.md` is the master catalogue. Complex work lives in **ExecPlans** — living documents under `docs/execution-plans/active/` that track progress, decisions, and outcomes as work proceeds.
 
-**ExecPlan structure** (enforced by linter):
+**ExecPlan structure** (enforced by linter, modeled on the [OpenAI Codex ExecPlan format](https://developers.openai.com/cookbook/articles/codex_exec_plans)):
 - `## Progress` — checkbox list updated at every stopping point
 - `## Decision Log` — records every key decision and its rationale
 - `## Outcomes & Retrospective` — summary written at completion
@@ -186,7 +234,7 @@ Run it weekly or after significant changes. Use `--dry-run` to preview.
 }
 ```
 
-All settings have sensible defaults. No configuration required to get started. The `plans` block is optional — omit it to use the defaults.
+All settings have sensible defaults. No configuration required to get started.
 
 ---
 
