@@ -35,7 +35,7 @@ Then install individual plugins:
 ### Install a plugin directly from GitHub
 
 ```bash
-git clone https://github.com/williamstanford/closed-loop-saas.git ~/claude-plugins/closed-loop-saas
+git clone https://github.com/william-c-stanford/closed-loop-saas.git ~/claude-plugins/closed-loop-saas
 ```
 
 Add to `~/.claude/settings.json`:
