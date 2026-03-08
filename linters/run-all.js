@@ -80,6 +80,23 @@ function main() {
 
   if (errors.length > 0 || warnings.length > 0) {
     console.log(`${errors.length} error(s), ${warnings.length} warning(s).${errors.length === 0 ? ' Warnings are non-blocking.' : ''}`);
+
+    // Suggest relevant garden commands based on which checks failed
+    const failedChecks = new Set([...errors, ...warnings].map(r => r.check));
+    const suggestions = [];
+    if (failedChecks.has('plans-misplaced') || failedChecks.has('plans-stray')) {
+      suggestions.push('/garden:harmonize  — move misplaced plan/spec files into docs/');
+    }
+    if (failedChecks.has('plans-orphan') || failedChecks.has('plans-active-structure') || failedChecks.has('cross-links')) {
+      suggestions.push('/garden:tend       — repair orphaned plans, fix structure, sync PLANS.md');
+    }
+    if (failedChecks.has('claude-md-toc-sync')) {
+      suggestions.push('/garden:weed       — remove or link docs not reachable from CLAUDE.md');
+    }
+
+    if (suggestions.length > 0) {
+      console.log('\nTo fix, run in Claude:\n' + suggestions.map(s => `  ${s}`).join('\n'));
+    }
   } else {
     console.log('All checks passed.');
   }

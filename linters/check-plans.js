@@ -200,7 +200,7 @@ function checkPlans(repoRoot, config, mode = 'pre-push') {
       status: 'warn',
       message: `${orphans.length} plan file(s) not linked from docs/PLANS.md`,
       detail: orphans.map(f => `  ${path.relative(repoRoot, f)}`).join('\n') +
-        '\n  → Add entries to docs/PLANS.md or move files to completed/',
+        '\n  → Run /garden:tend to sync docs/PLANS.md, or /garden:weed to remove stale entries',
     });
   } else {
     const count = allPlanFiles.length;
@@ -235,7 +235,8 @@ function checkPlans(repoRoot, config, mode = 'pre-push') {
       message: `${malformed.length} active plan(s) missing required sections`,
       detail: malformed.map(m =>
         `  ${m.file}: missing ${m.missing.map(s => `"${s}"`).join(', ')}`
-      ).join('\n'),
+      ).join('\n') +
+        '\n  → Run /garden:tend to repair active plan structure',
     });
   } else {
     results.push({

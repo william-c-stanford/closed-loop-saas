@@ -90,7 +90,8 @@ function checkCrossLinks(repoRoot, config) {
       check: 'cross-links',
       status: 'error',
       message: `${brokenLinks.length} broken link(s) in docs`,
-      detail: brokenLinks.map(l => `  ${l.from}: [${l.text}](${l.href})`).join('\n'),
+      detail: brokenLinks.map(l => `  ${l.from}: [${l.text}](${l.href})`).join('\n') +
+        '\n  → Run /garden:tend to repair broken links, or /garden:weed to remove dead references',
     });
   } else {
     results.push({
