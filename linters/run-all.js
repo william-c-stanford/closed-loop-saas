@@ -10,6 +10,7 @@ const { checkModuleAgents } = require('./check-module-agents');
 const { checkCoverage } = require('./check-coverage');
 const { checkFreshness } = require('./check-freshness');
 const { checkCrossLinks } = require('./check-cross-links');
+const { checkPlans } = require('./check-plans');
 
 // Resolve repo root by walking up from cwd until we find .git
 function findRepoRoot(startDir) {
@@ -54,10 +55,12 @@ function main() {
   allResults.push(...checkModuleAgents(repoRoot, config));
   allResults.push(...checkCoverage(repoRoot, config, mode === 'pre-push' ? 'pr' : 'pre-commit'));
   allResults.push(...checkFreshness(repoRoot, config));
+  allResults.push(...checkPlans(repoRoot, config, 'pre-commit'));
 
   // Pre-push / CI checks (slower, more thorough)
   if (mode === 'pre-push' || mode === 'ci' || mode === 'status') {
     allResults.push(...checkCrossLinks(repoRoot, config));
+    allResults.push(...checkPlans(repoRoot, config, mode));
   }
 
   if (jsonOutput || mode === 'status') {

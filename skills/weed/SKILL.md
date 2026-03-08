@@ -38,6 +38,7 @@ Check these signals and label each doc:
 - **stub**: fewer than 15 non-empty lines, OR contains unfilled template placeholders like `{{...}}` or lines like `<!-- TODO -->` with no other content.
 - **never-touched**: `git log --oneline` count is 1 (only the creation commit).
 - **superseded**: another doc covers the same topic. Read pairs of docs that seem related by name or section headers and compare content similarity.
+- **misplaced**: a plan or spec file in a non-standard location that should live under `docs/execution-plans/` or `docs/product-specs/`. Detection criteria: (a) any `.md` file under `plans/`, `specs/`, `features/`, `.agent/plans/`, `.agent/specs/`; OR (b) any `.md` file outside `docs/` containing 2+ plan-signal headings (`## Progress`, `## Milestones`, `## Decision Log`, `## Acceptance Criteria`) or spec-signal headings (`## User Story`, `## Problem Statement`, `## Proposed Solution`). Exclude forwarding stubs (content contains "has moved to") and `README.md`.
 - **healthy**: none of the above.
 
 Only flag docs with clear signals. When in doubt, mark as healthy.
@@ -57,7 +58,7 @@ Otherwise, use the **AskUserQuestion tool** to present a multi-select. For each 
 - Weed reason(s)
 - Key facts: age, line count, last modifier
 
-Format each option label as: `<path> — <reason> (<age> days old, <N> lines)`
+Format each option label as: `<path> — <reason> (<age> days old, <N> lines)`. For misplaced files, use: `<path> — misplaced → <destination> [migrate or delete]`
 
 **Step 5 — Handle superseded docs specially**
 
@@ -66,9 +67,15 @@ When two docs have significant content overlap:
 - Present as: "docs/auth-v1.md covers X, Y. docs/auth-v2.md covers X, Y, Z. V1 appears to be a subset."
 - Ask the user separately: delete v1, delete v2, or merge? If merge: draft the merged version and ask for confirmation before writing.
 
-**Step 6 — Delete confirmed candidates**
+**Step 6 — Act on confirmed candidates**
 
-For each doc the user confirmed for deletion:
+For each confirmed candidate, check which signal it had:
+
+**If misplaced (plan or spec in a non-standard location):** The user's selection label includes `[migrate or delete]`. Use AskUserQuestion to ask: "Migrate `<path>` to `<destination>`, or delete it?" with two options. Then:
+- If **migrate**: apply the `/garden:harmonize` migration logic — read the file, append any missing ExecPlan sections (for plans), write to the destination, write a forwarding stub at the original path, and update the relevant catalogue (`docs/PLANS.md` or `docs/product-specs/index.md`).
+- If **delete**: proceed to the deletion step below.
+
+**For all other signal types (and misplaced files where user chose delete):**
 ```bash
 git rm <file>
 ```

@@ -35,6 +35,7 @@ Claude Code lazy-loads these automatically when it navigates into a module direc
 | [docs/RELIABILITY.md](./docs/RELIABILITY.md) | SLOs, error handling, and runbooks |
 | [docs/QUALITY_SCORE.md](./docs/QUALITY_SCORE.md) | Domain quality grades and gaps |
 | [docs/PRODUCT_SENSE.md](./docs/PRODUCT_SENSE.md) | Product principles and product spec catalogue |
+| [docs/PLANS.md](./docs/PLANS.md) | Plans catalogue — active, completed, and deferred work |
 
 ## Generated Docs
 

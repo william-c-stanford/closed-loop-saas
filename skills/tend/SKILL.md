@@ -62,6 +62,36 @@ If `--dry-run`: describe what you would change for each doc, but don't write.
 
 Otherwise: write the update using Edit (never Write, to preserve existing content).
 
+**Step 3b — Check for newly created stray plan and spec files**
+
+After updating candidate docs, check whether any new plan or spec files have been created in non-standard locations since the last tend run. This catches files written by other plugins (e.g., `plans/` from the compound-engineering workflows plugin) or by hand.
+
+```bash
+# Files added since last SHA in known non-standard locations
+git log <last_sha>..HEAD --diff-filter=A --name-only --oneline \
+  -- 'plans/*.md' '.agent/plans/*.md' 'specs/*.md' 'features/*.md' '.agent/specs/*.md' \
+  2>/dev/null || true
+
+# If last_sha is null, check files added in the last 30 days
+git log --since="30 days ago" --diff-filter=A --name-only --oneline \
+  -- 'plans/*.md' 'specs/*.md' 'features/*.md' \
+  2>/dev/null || true
+```
+
+Filter out any file whose content contains "has moved to" (already a forwarding stub). Filter out files already under `docs/`.
+
+If new stray files are found, report them inline:
+
+"I also noticed new plan/spec files outside the standard structure:
+  - plans/feat-auth.md (added <date>)
+  - specs/dark-mode.md (added <date>)
+
+These should live in `docs/execution-plans/` and `docs/product-specs/`. Run `/garden:harmonize` to migrate them, or I can do it now."
+
+Use the **AskUserQuestion tool** with two options: "Migrate now" or "Skip (I'll run /garden:harmonize later)". If the user chooses migrate, apply the migration logic from `/garden:harmonize` Steps 4–7 for each file. If skip, note the files in the gardening log.
+
+If no new stray files are found, continue silently.
+
 **Step 4 — Handle generated docs**
 
 For `docs/generated/db-schema.md`, regenerate from source:

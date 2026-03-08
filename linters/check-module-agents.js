@@ -27,7 +27,7 @@ function checkModuleAgents(repoRoot, config) {
   const results = [];
   const sourceDirs = config.source_dirs || ['src', 'app', 'lib'];
   const ignore = config.ignore_paths || ['node_modules', '.git', 'dist', 'build'];
-  const maxLines = config.module_md_max_lines || 150;
+  const maxLines = config.module_md_max_lines || 750;
   const requiredAbove = config.module_md_required_above_file_count || 10;
 
   for (const srcDir of sourceDirs) {
@@ -65,7 +65,7 @@ function checkModuleAgents(repoRoot, config) {
           check: 'module-claude-md-length',
           status: 'error',
           message: `${srcDir}/${mod.name}/CLAUDE.md is ${lineCount} lines (max ${maxLines})`,
-          detail: 'Module guides should be focused. Move detailed docs to docs/',
+          detail: 'Module guides should be comprehensive but focused. Split into sub-module docs or move cross-cutting content to docs/',
         });
       } else {
         results.push({

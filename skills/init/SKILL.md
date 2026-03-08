@@ -65,12 +65,59 @@ Create these files and directories if they don't exist:
 
 Add `<!-- garden-managed: auto -->` as the second line of every generated file.
 
+**Step 4b — Scaffold execution plans infrastructure**
+
+Create the plan lifecycle directories and initial catalogue:
+
+```bash
+mkdir -p docs/execution-plans/active
+mkdir -p docs/execution-plans/completed
+```
+
+Read `templates/docs/execution-plans/tech-debt-tracker.md.md` from the plugin and write it to `docs/execution-plans/tech-debt-tracker.md`, replacing `{{DATE}}` with today's date in YYYY-MM-DD format.
+
+Read `templates/docs/PLANS.md.md` from the plugin and write it to `docs/PLANS.md`, replacing:
+- `{{DATE}}` with today's date in YYYY-MM-DD format
+- `{{PLANS_ACTIVE_ROWS}}` with `_No plans yet._`
+- `{{PLANS_COMPLETED_ROWS}}` with `_No plans yet._`
+
+Skip this step (do not overwrite) if `docs/PLANS.md` already exists.
+
+**Step 4c — Detect and offer to harmonize stray plans and specs**
+
+After scaffolding the plans infrastructure, scan the repo for plan and spec files that are already present but in non-standard locations. These are files created by other plugins (such as the compound-engineering workflows plugin, which writes to `plans/`) or by hand, that should live under `docs/execution-plans/` and `docs/product-specs/`.
+
+Run these searches:
+
+```bash
+# Location-based plan candidates
+find plans/ .agent/plans/ -name "*.md" 2>/dev/null | grep -v "README.md" || true
+
+# Content-based plan candidates (outside docs/)
+grep -rl "## Progress\|## Milestones\|## Decision Log\|## Implementation Plan" \
+  --include="*.md" \
+  --exclude-dir=docs --exclude-dir=node_modules --exclude-dir=".git" \
+  . 2>/dev/null || true
+
+# Location-based spec candidates
+find specs/ features/ .agent/specs/ -name "*.md" 2>/dev/null | grep -v "README.md" || true
+```
+
+Exclude any file whose content contains "has moved to" (forwarding stub) and any file already under `docs/`.
+
+If candidates are found, use the **AskUserQuestion tool** to present them as a multi-select. Label each option: `<current-path> → <destination>  [plan/spec, active/completed]`. Tell the user these files were found outside the standard structure and ask which ones to migrate now. Unselected files will be left in place and can be migrated later with `/garden:harmonize`.
+
+For each confirmed file, apply the migration logic from `/garden:harmonize` Steps 6–7: append any missing required sections to plans, write the file to the destination, write a forwarding stub at the original path, and update `docs/PLANS.md` or `docs/product-specs/index.md` accordingly.
+
+If no candidates are found, skip silently and continue to Step 5.
+
 **Step 5 — Scaffold per-module CLAUDE.md files**
 
 For every qualifying module you identified in Step 3 (all source_dirs × their subdirectories with ≥10 files):
-1. Read 3-5 source files from that module to understand its purpose (prefer index/entry files, files with descriptive names; skip tests and generated files)
-2. Fill in `templates/module-CLAUDE.md.md` template with specific, concrete content
-3. Write to `<module-dir>/CLAUDE.md`
+1. Read 10-20 source files from that module — prioritise entry points, files with many imports, and files whose names suggest core patterns (service, repository, handler, controller). Also read test files to understand the testing approach.
+2. Infer: purpose, internal architecture, coding conventions, key patterns with canonical file references, key types/interfaces, what belongs/doesn't belong, key dependencies, testing approach, and any non-obvious gotchas.
+3. Fill in `templates/module-CLAUDE.md.md` with concrete, specific content for every section. Do not write generic statements. The module CLAUDE.md is only loaded when Claude navigates into this directory — it should be thorough enough that a contributor never needs to re-read the source to understand conventions.
+4. Write to `<module-dir>/CLAUDE.md`
 
 Skip modules that already have a CLAUDE.md.
 
