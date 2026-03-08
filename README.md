@@ -23,7 +23,7 @@ The plugins in this marketplace operationalize these insights as Claude Code too
 ### Add the full marketplace
 
 ```
-/plugin marketplace add williamstanford/closed-loop-saas
+/plugin marketplace add william-c-stanford/closed-loop-saas
 ```
 
 Then install individual plugins:
