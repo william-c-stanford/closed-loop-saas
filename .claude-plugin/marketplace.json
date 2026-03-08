@@ -1,0 +1,22 @@
+{
+  "name": "closed-loop-saas",
+  "owner": {
+    "name": "William Stanford"
+  },
+  "metadata": {
+    "description": "A marketplace of Claude Code plugins for building and maintaining closed-loop SaaS products.",
+    "pluginRoot": "./plugins"
+  },
+  "plugins": [
+    {
+      "name": "context-gardening",
+      "source": "./plugins/context-gardening",
+      "description": "Agent-legible repository knowledge management. Enforces CLAUDE.md as a navigation map, per-module nested CLAUDE.md files for local conventions, and an AI gardener that keeps docs in sync with code.",
+      "version": "0.1.0",
+      "author": {
+        "name": "William Stanford"
+      },
+      "license": "MIT"
+    }
+  ]
+}
