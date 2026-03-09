@@ -177,6 +177,10 @@ Ask: "Would you like me to add a GitHub Actions workflow for CI linting? (`.gith
 
 If yes, copy `github-actions/garden-ci.yml` from the plugin to `.github/workflows/garden-ci.yml`.
 
+Additionally, check whether this is a Python project by looking for `pyproject.toml`, `setup.py`, `setup.cfg`, or `requirements.txt` in the repo root. If any of these exist, also ask: "I also detected a Python project. Would you like me to add a Python CI workflow with formatting, linting, type checking, and tests? (`.github/workflows/python-ci.yml`)"
+
+If yes, copy `github-actions/python-ci.yml` from the plugin to `.github/workflows/python-ci.yml`. Note that the workflow installs `ruff` and `mypy` automatically — no manual setup is needed. Remind the user they can customise the Python version or test paths in the file if needed.
+
 **Step 9 — Verify and report**
 
 Run the linter to confirm init was comprehensive:
