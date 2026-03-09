@@ -47,7 +47,7 @@ Each command is a **Claude Code skill** — a `SKILL.md` file that Claude execut
 | Command | What it does |
 |---|---|
 | `/context-gardening:init` | Read the repo, scaffold docs structure, generate all `CLAUDE.md` files, install git hooks |
-| `/context-gardening:tend` | Diff code changes since last run, update stale docs, flag newly created stray plans |
+| `/context-gardening:tend` | Diff code changes since last run, run lint checks, update stale docs, fix lint violations with full commit context |
 | `/context-gardening:weed` | Find and interactively prune stale, orphaned, or misplaced docs |
 | `/context-gardening:harmonize` | Migrate plans/specs from non-standard locations into `docs/execution-plans/` and `docs/product-specs/` |
 | `/context-gardening:status` | Knowledge base health dashboard — linter summary, missing CLAUDE.md files, stale docs |
@@ -143,10 +143,17 @@ docs/
    - `*component*, *ui*, *view*, *page*` → `docs/FRONTEND.md`
    - `*migration*, *schema*` → `docs/generated/db-schema.md`
    - `package.json`, `pyproject.toml`, `go.mod` → `ARCHITECTURE.md`
-4. For each candidate doc: reads the doc, reads the relevant changed source files or diffs, and makes the minimum necessary update — preserving voice and structure, skipping `<!-- garden-managed: manual -->` sections, updating `<!-- last-reviewed: -->` markers.
-5. Checks for newly created stray plan/spec files since the last tend and surfaces them via `AskUserQuestion`.
-6. Regenerates `docs/generated/db-schema.md` from ORM schema files (supports Django, Rails, Prisma, Drizzle/TypeORM, SQLAlchemy).
-7. Updates `.garden/last-tended.json` with the current HEAD SHA and appends a run summary to `docs/gardening-log.md`.
+4. **Runs the pre-push lint suite** (`node .garden/linters/run-all.js --pre-push --json`) and folds every warning and error into the work queue as additional remediation tasks — merged and deduplicated with the diff-derived candidates. For each lint finding, tend also fetches the commits and diffs for the flagged files (`git log`/`git diff` scoped to those paths since the last SHA), so it has both the structural violation and the causal git history before deciding what to change. Lint-to-remediation mappings:
+   - `claude-md-toc-sync` → add missing links to CLAUDE.md for the flagged files
+   - `claude-md-length` → trim CLAUDE.md to bring it under the line limit
+   - `freshness-marker` → update `<!-- last-reviewed: -->` in each stale doc
+   - `cross-links` → fix each broken relative link
+   - `plans-orphan` → add missing entries to `docs/PLANS.md`
+   - `plans-active-structure` → add required sections to the flagged active plans
+5. For each candidate doc (diff-derived or lint-derived): reads the doc and the relevant diff/commit context, then makes the minimum necessary update — preserving voice and structure, skipping `<!-- garden-managed: manual -->` sections, updating `<!-- last-reviewed: -->` markers.
+6. Checks for newly created stray plan/spec files since the last tend and surfaces them via `AskUserQuestion`.
+7. Regenerates `docs/generated/db-schema.md` from ORM schema files (supports Django, Rails, Prisma, Drizzle/TypeORM, SQLAlchemy).
+8. Updates `.garden/last-tended.json` with the current HEAD SHA and appends a run summary to `docs/gardening-log.md`, including which lint violations were resolved vs. which remain.
 
 With `--pr`, it commits the updates on a `garden/tend-<date>` branch and opens a PR via the `gh` CLI.
 

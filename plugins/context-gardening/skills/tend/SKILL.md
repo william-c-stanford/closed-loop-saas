@@ -74,10 +74,34 @@ Use this mapping to decide what to do for each failing check:
 | `plans-active-structure` | Add the missing required sections to each active plan named in `detail` |
 | `doc-coverage` | Ensure the identified source file's corresponding doc is in the candidate list |
 
-When processing a lint-derived candidate in Step 3, include the lint finding as explicit context:
-> "Lint reported `<check>`: <message>. <detail>"
+**For each lint finding, enrich it with git context** — extract the files mentioned in `detail` (file paths, module names, etc.) and run:
 
-This ensures the agent has both the diff context (what changed in code) and the structural context (what rule is violated) when deciding how to update docs.
+```bash
+# Which commits touched those files since the last garden run?
+git log <last_sha>..HEAD --oneline -- <file1> <file2> ...
+
+# What exactly changed in those files?
+git diff <last_sha>..HEAD -- <file1> <file2> ...
+```
+
+If `last_sha` is null, scope to the past 30 days (`--since="30 days ago"`).
+
+Attach the results to the lint finding as a `git_context` block:
+```
+lint finding: claude-md-toc-sync
+  flagged files : docs/gardening-log.md, docs/generated/db-schema.md
+  related commits:
+    a1b2c3d  docs: add gardening log (Jane, 2 days ago)
+    e4f5g6h  feat: regenerate db schema (Bob, 5 days ago)
+  diff summary  : docs/gardening-log.md created (new file), docs/generated/db-schema.md regenerated
+```
+
+When processing a lint-derived candidate in Step 3, pass the full enriched context block:
+> "Lint reported `<check>`: <message>. <detail>
+> Related commits: <commits>
+> Diff: <diff summary>"
+
+This gives the agent both the structural violation (what rule failed) and the causal history (what code changes triggered it), so it can make precise, well-reasoned edits rather than guessing.
 
 **Step 3 — For each candidate doc**
 

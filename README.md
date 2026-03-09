@@ -30,7 +30,22 @@ The plugins in this marketplace make that compounding structure easy to create a
 
 ### [context-gardening](./plugins/context-gardening)
 
-The flagship plugin. Run one command to give your codebase a permanent, structured memory that Claude reads automatically at the start of every session. As your code changes, a set of automated checks and AI-powered skills keep that memory accurate.
+The flagship plugin. Gives your codebase a permanent, structured memory that Claude reads automatically at the start of every session — no manual loading, no prompting.
+
+The structure is a `CLAUDE.md` hierarchy: a concise root nav map (~150 lines) that Claude reads on every session start, plus per-module `CLAUDE.md` files that are lazy-loaded only when Claude navigates into that directory. Module guides can be thorough — canonical patterns, key types, gotchas, testing conventions — because they don't bloat the global context. A `docs/` tree holds architecture decisions, security posture, execution plans, and product specs, linked from the root.
+
+**Six Claude Code skills** manage the lifecycle:
+
+| Skill | What it does |
+|---|---|
+| `/context-gardening:init` | Reads your repo, scaffolds the full `CLAUDE.md` + `docs/` structure, generates module guides by reading actual source files, installs git hooks |
+| `/context-gardening:tend` | Gets the git diff since the last run, runs the full lint suite, maps changed files and lint violations to candidate docs, enriches each finding with the relevant commits and diffs, then makes the minimum necessary update to each stale doc |
+| `/context-gardening:weed` | Finds and interactively prunes orphaned, stale, or misplaced docs |
+| `/context-gardening:harmonize` | Migrates plan and spec files from non-standard locations into `docs/execution-plans/` and `docs/product-specs/` |
+| `/context-gardening:status` | Knowledge base health dashboard — linter summary, missing module guides, stale docs |
+| `/context-gardening:scaffold-module <path>` | Generates a `CLAUDE.md` for a new module by reading its source files |
+
+**Pure Node.js linters** run as pre-commit and pre-push git hooks — zero npm dependencies, no install step. They enforce line limits on `CLAUDE.md` files, doc coverage for staged source changes, freshness markers, cross-link integrity, and plan file structure. When a lint check fails inside a Claude Code session, the hook surfaces an interactive fix prompt instead of a raw error.
 
 → [Full documentation and setup guide](./plugins/context-gardening/README.md)
 
