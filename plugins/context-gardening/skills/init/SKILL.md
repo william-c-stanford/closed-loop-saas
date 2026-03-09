@@ -14,7 +14,19 @@ cat package.json 2>/dev/null || cat pyproject.toml 2>/dev/null || cat Gemfile 2>
 ls -d */ 2>/dev/null
 ls docs/ 2>/dev/null || echo "No docs/ directory yet"
 cat CLAUDE.md 2>/dev/null || cat README.md 2>/dev/null | head -40 || echo "No existing context file"
+
+# Detect MDX docs site type
+find . -name "_meta.json" -not -path "*/node_modules/*" -not -path "*/.git/*" 2>/dev/null | head -5
+ls docs/sidebars.js docs/sidebars.ts sidebars.js sidebars.ts docusaurus.config.js docusaurus.config.ts 2>/dev/null || true
+find . -name "*.mdx" -not -path "*/node_modules/*" -not -path "*/.git/*" -not -path "*/dist/*" -not -path "*/.next/*" 2>/dev/null | wc -l
 ```
+
+From these results, detect:
+- **`mdx_site_type`**: `"nextra"` (if `_meta.json` files present), `"docusaurus"` (if `sidebars.js`/`docusaurus.config.js` present), or `null` (no MDX site detected).
+- **`mdx_docs_root`**: the root directory containing the MDX files (e.g., `pages/`, `app/`, `docs/`).
+- **`mdx_nav_config`**: path to the primary nav config file (first `_meta.json` for Nextra, `sidebars.js` for Docusaurus).
+
+Record these for use in Step 4d and Step 7.
 
 **Step 2 — Check for existing files to avoid overwriting**
 
@@ -109,7 +121,38 @@ If candidates are found, use the **AskUserQuestion tool** to present them as a m
 
 For each confirmed file, apply the migration logic from `/garden:harmonize` Steps 6–7: append any missing required sections to plans, write the file to the destination, write a forwarding stub at the original path, and update `docs/PLANS.md` or `docs/product-specs/index.md` accordingly.
 
-If no candidates are found, skip silently and continue to Step 5.
+If no candidates are found, skip silently and continue to Step 4d.
+
+**Step 4d — Audit MDX navigation coverage**
+
+Only run this step if `mdx_site_type` is non-null (detected in Step 1).
+
+Find all `.mdx` files under the `mdx_docs_root`:
+
+```bash
+find <mdx_docs_root> -name "*.mdx" -not -path "*/node_modules/*" -not -path "*/.next/*" 2>/dev/null
+```
+
+**Nextra** — for each `.mdx` file, check whether its stem (filename without extension) is a key in the `_meta.json` of its parent directory:
+```bash
+# For each directory containing .mdx files, read its _meta.json
+cat <dir>/_meta.json 2>/dev/null || echo "{}"
+```
+A file is **orphaned** if its stem does not appear as a key in that directory's `_meta.json`.
+
+**Docusaurus** — read `sidebars.js` (or `sidebars.ts`). Extract all doc IDs. A file is **orphaned** if its path relative to the docs root (without `.mdx` extension) is not present as a doc ID in any sidebar array.
+
+If orphaned MDX files are found, report them before proceeding:
+
+"Found MDX pages not reachable via the navigation structure:
+  - <path> (not in _meta.json / sidebars.js)
+  - ...
+
+These exist on disk but users can't navigate to them. You should add them to the appropriate nav config."
+
+Do NOT auto-modify nav config files. Navigation order is intentional; only the author should set it. List each orphan with its path and which nav file it is missing from, so the user can fix it manually.
+
+If no orphans are found, continue silently to Step 5.
 
 **Step 5 — Scaffold per-module CLAUDE.md files**
 
@@ -162,9 +205,14 @@ Use the source_dirs you actually found in Step 3 (not the defaults):
   "doc_coverage_mode": "warn",
   "source_dirs": ["<actual source dirs detected in Step 3>"],
   "generated_docs": ["docs/generated/db-schema.md"],
-  "ignore_paths": ["node_modules", ".git", "dist", "build"]
+  "ignore_paths": ["node_modules", ".git", "dist", "build"],
+  "mdx_site_type": "<nextra|docusaurus|null — from Step 1>",
+  "mdx_docs_root": "<mdx_docs_root from Step 1, or null>",
+  "mdx_nav_config": "<path to nav config file from Step 1, or null>"
 }
 ```
+
+If no MDX site was detected, set all three `mdx_*` fields to `null`.
 
 Create `.garden/last-tended.json`:
 ```json

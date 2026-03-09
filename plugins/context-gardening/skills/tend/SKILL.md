@@ -92,6 +92,50 @@ Use the **AskUserQuestion tool** with two options: "Migrate now" or "Skip (I'll 
 
 If no new stray files are found, continue silently.
 
+**Step 3c — Check for undiscoverable MDX files**
+
+Detect whether the repo contains an MDX-based docs site:
+
+```bash
+# Nextra (_meta.json files govern sidebar)
+find . -name "_meta.json" -not -path "*/node_modules/*" -not -path "*/.git/*" 2>/dev/null | head -5
+
+# Docusaurus
+ls docs/sidebars.js docs/sidebars.ts sidebars.js sidebars.ts 2>/dev/null
+ls docusaurus.config.js docusaurus.config.ts 2>/dev/null
+
+# Generic MDX inventory
+find . -name "*.mdx" -not -path "*/node_modules/*" -not -path "*/.git/*" -not -path "*/dist/*" -not -path "*/.next/*" 2>/dev/null
+```
+
+If no `.mdx` files exist anywhere in the repo, skip this step silently.
+
+**Nextra repos** (identified by presence of `_meta.json` files):
+- Build the set of all `.mdx` files under the docs root (typically `pages/` or `app/` or `docs/`).
+- Build the set of all `.mdx` files referenced (directly or as directory keys) across all `_meta.json` files. A file is referenced if its stem (filename without extension) appears as a key in any `_meta.json` in its parent directory.
+- Orphans = mdx files whose stem does NOT appear as a key in the `_meta.json` of their parent directory.
+
+**Docusaurus repos** (identified by `sidebars.js` / `sidebars.ts` / `docusaurus.config.js`):
+- Read the sidebar config file to extract all referenced doc IDs (e.g., `'intro'`, `'guides/quickstart'`).
+- Build the set of all `.mdx` files under `docs/` (or the configured docs root). A file is referenced if its path relative to the docs root (without extension) matches a sidebar doc ID.
+- Orphans = mdx files with no matching doc ID in any sidebar.
+
+**Other / unknown nav structure:**
+- Check `.garden/config.json` for a `mdx_nav_config` field pointing to the nav file.
+- If not configured, report that MDX files were found but nav format is unknown, and ask the user to set `mdx_nav_config` in `.garden/config.json`.
+
+If orphaned MDX files are found, report them:
+
+"I also found MDX files not reachable via the navigation structure:
+  - pages/deep-dive/advanced.mdx (not in _meta.json)
+  - pages/changelog/v2.mdx (not in _meta.json)
+
+These pages exist but users can't navigate to them. Add them to the appropriate `_meta.json` (or `sidebars.js`) to make them discoverable."
+
+List each orphan with its path and which nav file it's missing from. Do NOT auto-modify nav config files — navigation order is intentional. Only report.
+
+If no orphans are found, continue silently.
+
 **Step 4 — Handle generated docs**
 
 For `docs/generated/db-schema.md`, regenerate from source:
