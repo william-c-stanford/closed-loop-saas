@@ -47,34 +47,46 @@ Deduplicate the candidate list. Only include docs that actually exist.
 
 **Step 2b — Run lint to surface structural doc issues**
 
-Run the lint suite in JSON mode so the output can be parsed programmatically:
+Run both lint modes in JSON mode so the output can be parsed programmatically. Run them both — pre-commit catches fast staged-file violations, pre-push catches full-tree structural issues:
 
 ```bash
 LINTERS_DIR="$(git rev-parse --show-toplevel)/.garden/linters"
 if [ -f "$LINTERS_DIR/run-all.js" ]; then
+  node "$LINTERS_DIR/run-all.js" --pre-commit --json
   node "$LINTERS_DIR/run-all.js" --pre-push --json
 fi
 ```
 
 If the linters are not installed (`.garden/linters/run-all.js` absent), skip this step silently.
 
-Parse the JSON array. For each result where `status` is `"warn"` or `"error"`, translate it into a concrete remediation task and add it to the work queue, merging with the diff-derived candidate list from Step 2. Deduplicate.
+Merge the two JSON arrays into a single result set. Deduplicate by `check` + `message` (pre-push runs a superset of pre-commit checks, so some findings may appear in both). For each result where `status` is `"warn"` or `"error"`, translate it into a concrete remediation task and add it to the work queue, merging with the diff-derived candidate list from Step 2. Deduplicate.
 
 Use this mapping to decide what to do for each failing check:
 
+**Pre-commit checks** (staged-file scope):
+
 | Check | Remediation |
 |---|---|
-| `claude-md-toc-sync` | Add links in CLAUDE.md for every doc listed in the `detail` field (the warning includes the exact file paths) |
-| `claude-md-length` | Trim CLAUDE.md — tighten prose, remove redundant sections — to bring it under the limit |
+| `claude-md-length` | Trim CLAUDE.md — tighten prose, remove redundant sections — to bring it under the line limit |
 | `claude-md-links` | Fix each broken link identified in `detail` |
 | `module-claude-md-length` | Trim the specific module CLAUDE.md named in `message` |
+| `module-claude-md-required` | Generate a `CLAUDE.md` for each module directory listed in `detail` using `/context-gardening:scaffold-module` logic |
+| `doc-coverage` | Ensure the source file identified in `detail` has a corresponding doc candidate in the work queue |
 | `freshness-marker` | Update `<!-- last-reviewed: YYYY-MM-DD -->` in each stale doc listed in `detail` |
-| `cross-links` | Fix each broken cross-link pair listed in `detail` |
-| `plans-orphan` | Add missing plan entries to `docs/PLANS.md` |
-| `plans-active-structure` | Add the missing required sections to each active plan named in `detail` |
-| `doc-coverage` | Ensure the identified source file's corresponding doc is in the candidate list |
+| `plans-misplaced` | Note the flagged file — surface it as a stray plan (same as Step 3b logic) and offer to migrate via `/garden:harmonize` |
 
-**For each lint finding, enrich it with git context** — extract the files mentioned in `detail` (file paths, module names, etc.) and run:
+**Pre-push checks** (full-tree scope, superset of above):
+
+| Check | Remediation |
+|---|---|
+| `claude-md-toc-sync` | Add links in CLAUDE.md for every doc listed in the `detail` field |
+| `cross-links` | Fix each broken relative link pair listed in `detail` |
+| `plans-stray` | Surface the flagged file as a stray plan and offer to migrate |
+| `plans-catalogue-exists` | Create `docs/PLANS.md` from the plans catalogue template |
+| `plans-orphan` | Add missing plan entries to `docs/PLANS.md` |
+| `plans-active-structure` | Add the missing required sections (`## Progress`, `## Decision Log`, `## Outcomes & Retrospective`) to each active plan named in `detail` |
+
+**For each lint finding (pre-commit or pre-push), enrich it with git context** — extract the files mentioned in `detail` (file paths, module names, etc.) and run:
 
 ```bash
 # Which commits touched those files since the last garden run?
@@ -120,35 +132,114 @@ If `--dry-run`: describe what you would change for each doc, but don't write.
 
 Otherwise: write the update using Edit (never Write, to preserve existing content).
 
-**Step 3b — Check for newly created stray plan and spec files**
+**Step 3b — Discover and migrate stray plan and spec files**
 
-After updating candidate docs, check whether any new plan or spec files have been created in non-standard locations since the last tend run. This catches files written by other plugins (e.g., `plans/` from the compound-engineering workflows plugin) or by hand.
+Scan for plan and spec files outside the standard structure. This runs the full harmonize logic inline — no separate command required.
 
+**Discovery — location-based:**
 ```bash
-# Files added since last SHA in known non-standard locations
-git log <last_sha>..HEAD --diff-filter=A --name-only --oneline \
-  -- 'plans/*.md' '.agent/plans/*.md' 'specs/*.md' 'features/*.md' '.agent/specs/*.md' \
-  2>/dev/null || true
+# Plans in non-standard locations
+find plans/ .agent/plans/ -name "*.md" 2>/dev/null
+ls *-plan.md *.plan.md PLANS.md 2>/dev/null | grep -v "^ls:" || true
 
-# If last_sha is null, check files added in the last 30 days
-git log --since="30 days ago" --diff-filter=A --name-only --oneline \
-  -- 'plans/*.md' 'specs/*.md' 'features/*.md' \
-  2>/dev/null || true
+# Specs in non-standard locations
+find specs/ features/ .agent/specs/ -name "*.md" 2>/dev/null
 ```
 
-Filter out any file whose content contains "has moved to" (already a forwarding stub). Filter out files already under `docs/`.
+**Discovery — content-based** (scan all `.md` outside `docs/`, `node_modules/`, `.git/`):
+```bash
+# Plan signals: 2+ of these headings in the same file
+grep -rl "## Progress\|## Milestones\|## Decision Log\|## Implementation Plan\|## Acceptance Criteria" \
+  --include="*.md" --exclude-dir=docs --exclude-dir=node_modules --exclude-dir=".git" . 2>/dev/null
 
-If new stray files are found, report them inline:
+# Spec signals: 2+ of these headings (and doesn't already qualify as a plan)
+grep -rl "## User Story\|## Problem Statement\|## Proposed Solution" \
+  --include="*.md" --exclude-dir=docs --exclude-dir=node_modules --exclude-dir=".git" . 2>/dev/null
+```
 
-"I also noticed new plan/spec files outside the standard structure:
-  - plans/feat-auth.md (added <date>)
-  - specs/dark-mode.md (added <date>)
+Also incorporate any `plans-misplaced` or `plans-stray` lint findings from Step 2b — those files are already identified candidates.
 
-These should live in `docs/execution-plans/` and `docs/product-specs/`. Run `/garden:harmonize` to migrate them, or I can do it now."
+Exclude: files whose content contains "has moved to" (forwarding stubs), `README.md`, files already under `docs/`.
 
-Use the **AskUserQuestion tool** with two options: "Migrate now" or "Skip (I'll run /garden:harmonize later)". If the user chooses migrate, apply the migration logic from `/garden:harmonize` Steps 4–7 for each file. If skip, note the files in the gardening log.
+If no stray files are found, continue silently.
 
-If no new stray files are found, continue silently.
+**Classification — for each stray plan:**
+
+Determine lifecycle stage:
+- **Completed**: `## Outcomes & Retrospective` has substantive content AND `## Progress` has no unchecked `- [ ]` boxes
+- **Active**: everything else
+
+Determine destination: `docs/execution-plans/active/<filename>` or `docs/execution-plans/completed/<filename>`
+
+Identify missing required sections (any of `## Progress`, `## Decision Log`, `## Outcomes & Retrospective` not present).
+
+**Migration — plans:**
+
+If `--dry-run`: describe each migration (source → destination, stage, missing sections) but don't write anything.
+
+Otherwise, for each stray plan:
+
+1. Read the file content.
+2. Append any missing required sections using these exact placeholders:
+
+   ```markdown
+   ## Progress
+
+   _No progress entries yet. Add checkboxes as work begins._
+
+   ## Decision Log
+
+   _No decisions recorded yet._
+
+   ## Outcomes & Retrospective
+
+   _Populated at completion._
+   ```
+
+   Only append sections that are genuinely absent. Do not duplicate existing sections.
+
+3. Write the updated content to the destination path. Create the directory if needed:
+   ```bash
+   mkdir -p docs/execution-plans/active
+   mkdir -p docs/execution-plans/completed
+   ```
+
+4. Overwrite the original file with a forwarding stub:
+   ```markdown
+   # [Moved] <original filename without extension>
+
+   This plan has moved to [`<destination>`](<destination>).
+
+   It was migrated by `/garden:tend` on <YYYY-MM-DD>.
+   ```
+
+5. Update `docs/PLANS.md`: insert a new row in the Active or Completed table. Infer a one-line summary from the plan's Purpose/Overview or first paragraph. Row format:
+   ```
+   | [<title>](execution-plans/<stage>/<filename>.md) | <Active or Completed> | <YYYY-MM> | <summary> |
+   ```
+   Use Edit to insert after the table header. If the section contains only `_No plans yet._`, replace that line with the new row.
+
+**Migration — specs:**
+
+If `--dry-run`: describe each migration but don't write.
+
+Otherwise, for each stray spec:
+
+1. Read the file content.
+2. Write it to `docs/product-specs/<filename>.md`.
+3. Overwrite the original with a forwarding stub:
+   ```markdown
+   # [Moved] <original filename without extension>
+
+   This spec has moved to [`docs/product-specs/<filename>`](docs/product-specs/<filename>.md).
+
+   It was migrated by `/garden:tend` on <YYYY-MM-DD>.
+   ```
+4. Update `docs/product-specs/index.md`: insert a new row in the Active Specs table. Row format:
+   ```
+   | [<title>](<filename>.md) | Draft | <one-line description> |
+   ```
+   If the table contains only `*(none yet)*`, replace that line with the new row.
 
 **Step 3c — Check for undiscoverable MDX files**
 
@@ -237,6 +328,8 @@ Append to `docs/gardening-log.md` (create if it doesn't exist):
 - **Skipped:** <file> — no relevant changes
 - **Generated:** <file>
 - **Lint fix:** <check> — <what was fixed> (e.g. "claude-md-toc-sync — added links for docs/gardening-log.md, docs/generated/db-schema.md")
+- **Migrated plan:** <original-path> → <destination> [<stage>, added sections: <list or "none">]
+- **Migrated spec:** <original-path> → docs/product-specs/<filename>
 ```
 
 Update `.garden/last-tended.json`:
@@ -250,8 +343,9 @@ Update `.garden/last-tended.json`:
 
 **Step 8 — Summary**
 
-Tell the user what was updated, what was skipped, and why. Include a short lint section:
-- List any lint warnings/errors that were resolved by this run
-- List any that remain unresolved (e.g. require manual intervention or a different skill like `/garden:weed`)
+Tell the user what was updated, what was skipped, and why. Group the output into sections:
+- **Doc updates:** files updated from diff-derived or lint-derived candidates
+- **Lint fixes:** warnings/errors resolved this run, and any that remain unresolved (e.g. those requiring `/garden:weed`)
+- **Migrations:** plans and specs moved into the standard structure, with their destinations and any sections that were added
 
 Suggest running `/context-gardening:status` to see overall health.

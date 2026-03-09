@@ -47,7 +47,7 @@ Each command is a **Claude Code skill** — a `SKILL.md` file that Claude execut
 | Command | What it does |
 |---|---|
 | `/context-gardening:init` | Read the repo, scaffold docs structure, generate all `CLAUDE.md` files, install git hooks |
-| `/context-gardening:tend` | Diff code changes since last run, run lint checks, update stale docs, fix lint violations with full commit context |
+| `/context-gardening:tend` | Diff code changes since last run, run lint checks, update stale docs, fix lint violations with full commit context, and automatically migrate stray plans and specs into the standard structure |
 | `/context-gardening:weed` | Find and interactively prune stale, orphaned, or misplaced docs |
 | `/context-gardening:harmonize` | Migrate plans/specs from non-standard locations into `docs/execution-plans/` and `docs/product-specs/` |
 | `/context-gardening:status` | Knowledge base health dashboard — linter summary, missing CLAUDE.md files, stale docs |
@@ -143,17 +143,20 @@ docs/
    - `*component*, *ui*, *view*, *page*` → `docs/FRONTEND.md`
    - `*migration*, *schema*` → `docs/generated/db-schema.md`
    - `package.json`, `pyproject.toml`, `go.mod` → `ARCHITECTURE.md`
-4. **Runs the pre-push lint suite** (`node .garden/linters/run-all.js --pre-push --json`) and folds every warning and error into the work queue as additional remediation tasks — merged and deduplicated with the diff-derived candidates. For each lint finding, tend also fetches the commits and diffs for the flagged files (`git log`/`git diff` scoped to those paths since the last SHA), so it has both the structural violation and the causal git history before deciding what to change. Lint-to-remediation mappings:
+4. **Runs both lint modes** (`--pre-commit` and `--pre-push`, both `--json`) and folds every warning and error into the work queue as additional remediation tasks — merged, deduplicated, and combined with the diff-derived candidates. Pre-commit catches fast staged-file violations (line limits, missing module guides, doc coverage, freshness, misplaced plans); pre-push catches full-tree structural issues (toc-sync, cross-links, orphaned plans, active plan structure). For each lint finding, tend also fetches the commits and diffs for the flagged files (`git log`/`git diff` scoped to those paths since the last SHA), so it has both the structural violation and the causal git history before deciding what to change. Lint-to-remediation mappings include:
    - `claude-md-toc-sync` → add missing links to CLAUDE.md for the flagged files
-   - `claude-md-length` → trim CLAUDE.md to bring it under the line limit
+   - `claude-md-length` / `module-claude-md-length` → trim the flagged doc to bring it under the limit
+   - `module-claude-md-required` → scaffold a new `CLAUDE.md` for the flagged module
    - `freshness-marker` → update `<!-- last-reviewed: -->` in each stale doc
+   - `doc-coverage` → ensure the flagged source file's corresponding doc is in the candidate list
    - `cross-links` → fix each broken relative link
+   - `plans-misplaced` / `plans-stray` → surface as stray plan, offer to migrate via `/garden:harmonize`
    - `plans-orphan` → add missing entries to `docs/PLANS.md`
    - `plans-active-structure` → add required sections to the flagged active plans
 5. For each candidate doc (diff-derived or lint-derived): reads the doc and the relevant diff/commit context, then makes the minimum necessary update — preserving voice and structure, skipping `<!-- garden-managed: manual -->` sections, updating `<!-- last-reviewed: -->` markers.
-6. Checks for newly created stray plan/spec files since the last tend and surfaces them via `AskUserQuestion`.
+6. **Automatically migrates stray plans and specs** — scans for plan and spec files outside the standard structure (by location: `plans/`, `specs/`, `features/`, `.agent/plans/`; and by content: files with 2+ plan/spec heading signals). Also picks up any `plans-misplaced` and `plans-stray` findings already identified by the lint step. For each candidate: classifies it as active or completed, appends any missing required ExecPlan sections (`## Progress`, `## Decision Log`, `## Outcomes & Retrospective`), moves it to `docs/execution-plans/active/` or `docs/execution-plans/completed/`, writes a forwarding stub at the original path, and updates `docs/PLANS.md` (or `docs/product-specs/index.md` for specs). No confirmation prompt — tend migrates automatically.
 7. Regenerates `docs/generated/db-schema.md` from ORM schema files (supports Django, Rails, Prisma, Drizzle/TypeORM, SQLAlchemy).
-8. Updates `.garden/last-tended.json` with the current HEAD SHA and appends a run summary to `docs/gardening-log.md`, including which lint violations were resolved vs. which remain.
+8. Updates `.garden/last-tended.json` with the current HEAD SHA and appends a run summary to `docs/gardening-log.md`, including doc updates, lint fixes, and any plan/spec migrations.
 
 With `--pr`, it commits the updates on a `garden/tend-<date>` branch and opens a PR via the `gh` CLI.
 

@@ -39,7 +39,7 @@ The structure is a `CLAUDE.md` hierarchy: a concise root nav map (~150 lines) th
 | Skill | What it does |
 |---|---|
 | `/context-gardening:init` | Reads your repo, scaffolds the full `CLAUDE.md` + `docs/` structure, generates module guides by reading actual source files, installs git hooks |
-| `/context-gardening:tend` | Gets the git diff since the last run, runs the full lint suite, maps changed files and lint violations to candidate docs, enriches each finding with the relevant commits and diffs, then makes the minimum necessary update to each stale doc |
+| `/context-gardening:tend` | Gets the git diff since the last run, runs both pre-commit and pre-push lint suites, maps changed files and lint violations to candidate docs, enriches each finding with the relevant commits and diffs, makes the minimum necessary update to each stale doc, and automatically migrates stray plan and spec files into the standard structure |
 | `/context-gardening:weed` | Finds and interactively prunes orphaned, stale, or misplaced docs |
 | `/context-gardening:harmonize` | Migrates plan and spec files from non-standard locations into `docs/execution-plans/` and `docs/product-specs/` |
 | `/context-gardening:status` | Knowledge base health dashboard — linter summary, missing module guides, stale docs |
