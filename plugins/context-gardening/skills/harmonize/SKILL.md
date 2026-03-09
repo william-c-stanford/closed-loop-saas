@@ -28,23 +28,26 @@ Search for `.md` files that look like plans but are not already under `docs/exec
 Location-based (check these directories and patterns):
 - Any `.md` file under `plans/` at any depth
 - Any `.md` file under `.agent/plans/` at any depth
+- Any `.md` file under `docs/plans/` at any depth (a common intermediate location before full harmonization)
+- Any `.md` file under `todos/` at any depth
 - Root-level `PLANS.md` (not `docs/PLANS.md` — that is the catalogue, not a plan)
 - Root-level files matching `*-plan.md` or `*.plan.md`
 
-Content-based (for any `.md` file outside `docs/`, `node_modules/`, `.git/`):
+Content-based (scan all `.md` files, excluding `node_modules/`, `.git/`, and the standard destinations `docs/execution-plans/` and `docs/product-specs/`; `docs/plans/` is intentionally **not** excluded):
 - Contains 2 or more of these headings: `## Progress`, `## Milestones`, `## Acceptance Criteria`, `## Decision Log`, `## Implementation Plan`, `## Implementation`
 
 Exclude any file whose content contains the string "has moved to" (forwarding stub). Exclude `README.md`. Exclude files already under `docs/execution-plans/` (those are the destination, not candidates).
 
 ```bash
 # Location-based: find candidates in known non-standard dirs
-find plans/ .agent/plans/ -name "*.md" 2>/dev/null
+find plans/ .agent/plans/ docs/plans/ todos/ -name "*.md" 2>/dev/null
 ls *-plan.md *.plan.md PLANS.md 2>/dev/null | grep -v "^ls:" || true
 
-# Content-based: scan for plan-signal headings in any .md outside docs/
+# Content-based: scan for plan-signal headings, excluding only the standard destinations
 grep -rl "## Progress\|## Milestones\|## Decision Log\|## Implementation Plan\|## Acceptance Criteria" \
   --include="*.md" \
-  --exclude-dir=docs --exclude-dir=node_modules --exclude-dir=".git" \
+  --exclude-dir=node_modules --exclude-dir=".git" \
+  --exclude-dir=execution-plans --exclude-dir=product-specs \
   . 2>/dev/null
 ```
 

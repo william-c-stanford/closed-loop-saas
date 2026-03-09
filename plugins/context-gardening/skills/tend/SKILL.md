@@ -138,23 +138,32 @@ Scan for plan and spec files outside the standard structure. This runs the full 
 
 **Discovery — location-based:**
 ```bash
-# Plans in non-standard locations
-find plans/ .agent/plans/ -name "*.md" 2>/dev/null
+# Plans in non-standard locations (including docs/plans/ — a common intermediate location)
+find plans/ .agent/plans/ docs/plans/ todos/ -name "*.md" 2>/dev/null
 ls *-plan.md *.plan.md PLANS.md 2>/dev/null | grep -v "^ls:" || true
 
 # Specs in non-standard locations
 find specs/ features/ .agent/specs/ -name "*.md" 2>/dev/null
 ```
 
-**Discovery — content-based** (scan all `.md` outside `docs/`, `node_modules/`, `.git/`):
+**Discovery — content-based:**
+
+Scan all `.md` files outside `node_modules/` and `.git/`, but exclude the standard destinations (`docs/execution-plans/`, `docs/product-specs/`) so already-migrated files are not re-processed. Note: `docs/plans/` is intentionally **not** excluded — files there are candidates for migration.
+
 ```bash
 # Plan signals: 2+ of these headings in the same file
 grep -rl "## Progress\|## Milestones\|## Decision Log\|## Implementation Plan\|## Acceptance Criteria" \
-  --include="*.md" --exclude-dir=docs --exclude-dir=node_modules --exclude-dir=".git" . 2>/dev/null
+  --include="*.md" \
+  --exclude-dir=node_modules --exclude-dir=".git" \
+  --exclude-dir=execution-plans --exclude-dir=product-specs \
+  . 2>/dev/null
 
 # Spec signals: 2+ of these headings (and doesn't already qualify as a plan)
 grep -rl "## User Story\|## Problem Statement\|## Proposed Solution" \
-  --include="*.md" --exclude-dir=docs --exclude-dir=node_modules --exclude-dir=".git" . 2>/dev/null
+  --include="*.md" \
+  --exclude-dir=node_modules --exclude-dir=".git" \
+  --exclude-dir=execution-plans --exclude-dir=product-specs \
+  . 2>/dev/null
 ```
 
 Also incorporate any `plans-misplaced` or `plans-stray` lint findings from Step 2b — those files are already identified candidates.
