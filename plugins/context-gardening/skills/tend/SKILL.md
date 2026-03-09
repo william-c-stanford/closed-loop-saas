@@ -45,6 +45,40 @@ Also check `.garden/config.json` for custom `source_doc_mappings`.
 
 Deduplicate the candidate list. Only include docs that actually exist.
 
+**Step 2b — Run lint to surface structural doc issues**
+
+Run the lint suite in JSON mode so the output can be parsed programmatically:
+
+```bash
+LINTERS_DIR="$(git rev-parse --show-toplevel)/.garden/linters"
+if [ -f "$LINTERS_DIR/run-all.js" ]; then
+  node "$LINTERS_DIR/run-all.js" --pre-push --json
+fi
+```
+
+If the linters are not installed (`.garden/linters/run-all.js` absent), skip this step silently.
+
+Parse the JSON array. For each result where `status` is `"warn"` or `"error"`, translate it into a concrete remediation task and add it to the work queue, merging with the diff-derived candidate list from Step 2. Deduplicate.
+
+Use this mapping to decide what to do for each failing check:
+
+| Check | Remediation |
+|---|---|
+| `claude-md-toc-sync` | Add links in CLAUDE.md for every doc listed in the `detail` field (the warning includes the exact file paths) |
+| `claude-md-length` | Trim CLAUDE.md — tighten prose, remove redundant sections — to bring it under the limit |
+| `claude-md-links` | Fix each broken link identified in `detail` |
+| `module-claude-md-length` | Trim the specific module CLAUDE.md named in `message` |
+| `freshness-marker` | Update `<!-- last-reviewed: YYYY-MM-DD -->` in each stale doc listed in `detail` |
+| `cross-links` | Fix each broken cross-link pair listed in `detail` |
+| `plans-orphan` | Add missing plan entries to `docs/PLANS.md` |
+| `plans-active-structure` | Add the missing required sections to each active plan named in `detail` |
+| `doc-coverage` | Ensure the identified source file's corresponding doc is in the candidate list |
+
+When processing a lint-derived candidate in Step 3, include the lint finding as explicit context:
+> "Lint reported `<check>`: <message>. <detail>"
+
+This ensures the agent has both the diff context (what changed in code) and the structural context (what rule is violated) when deciding how to update docs.
+
 **Step 3 — For each candidate doc**
 
 Read the doc. Read the changed source files (or the relevant diff). Then reason:
@@ -178,6 +212,7 @@ Append to `docs/gardening-log.md` (create if it doesn't exist):
 - **Updated:** <file> — <one-line reason>
 - **Skipped:** <file> — no relevant changes
 - **Generated:** <file>
+- **Lint fix:** <check> — <what was fixed> (e.g. "claude-md-toc-sync — added links for docs/gardening-log.md, docs/generated/db-schema.md")
 ```
 
 Update `.garden/last-tended.json`:
@@ -191,4 +226,8 @@ Update `.garden/last-tended.json`:
 
 **Step 8 — Summary**
 
-Tell the user what was updated, what was skipped, and why. Suggest running `/context-gardening:status` to see overall health.
+Tell the user what was updated, what was skipped, and why. Include a short lint section:
+- List any lint warnings/errors that were resolved by this run
+- List any that remain unresolved (e.g. require manual intervention or a different skill like `/garden:weed`)
+
+Suggest running `/context-gardening:status` to see overall health.
